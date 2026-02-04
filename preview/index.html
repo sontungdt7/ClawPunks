@@ -121,14 +121,6 @@
 
   <div class="controls">
     <div class="control-group">
-      <label>Contract Address</label>
-      <input type="text" id="contractAddress" placeholder="0xd99aDFa07f97C444DCDddAA70B3c58A9d33124EE" />
-    </div>
-    <div class="control-group">
-      <label>RPC URL (Sepolia)</label>
-      <input type="text" id="rpcUrl" placeholder="https://rpc.sepolia.org" />
-    </div>
-    <div class="control-group">
       <button id="loadBtn" onclick="loadAllNFTs()">Load All NFTs</button>
     </div>
   </div>
@@ -137,20 +129,18 @@
   <div id="grid" class="grid"></div>
 
   <script>
-    const DEFAULT_CONTRACT = "0xd99aDFa07f97C444DCDddAA70B3c58A9d33124EE";
-    const DEFAULT_RPC = "https://rpc.sepolia.org";
     const MAX_SUPPLY = 10000;
 
     const ERC721_ABI = ["function tokenURI(uint256 tokenId) view returns (string)"];
 
-    function getContractAddress() {
-      const v = document.getElementById("contractAddress").value.trim();
-      return v || DEFAULT_CONTRACT;
-    }
+    let config = { contractAddress: null, rpcUrl: null };
 
-    function getRpcUrl() {
-      const v = document.getElementById("rpcUrl").value.trim();
-      return v || DEFAULT_RPC;
+    async function ensureConfig() {
+      if (config.contractAddress && config.rpcUrl) return config;
+      const res = await fetch("/api/config");
+      if (!res.ok) throw new Error("Failed to load config");
+      config = await res.json();
+      return config;
     }
 
     function setStatus(msg) {
@@ -184,9 +174,11 @@
       grid.innerHTML = "";
 
       try {
+        setStatus("Loading config…");
+        const { contractAddress, rpcUrl } = await ensureConfig();
         setStatus("Connecting…");
-        const provider = new ethers.JsonRpcProvider(getRpcUrl());
-        const contract = new ethers.Contract(getContractAddress(), ERC721_ABI, provider);
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const contract = new ethers.Contract(contractAddress, ERC721_ABI, provider);
 
         setStatus("Finding total minted…");
         const totalMinted = await findTotalMinted(contract);
