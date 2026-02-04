@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title ClawPunks
-/// @notice Fully onchain 20x20 pixel art NFT. Art matches generate_grid_svg.py.
-/// @dev Pixel map: 0=bg, 1=claw, 2=eyes, 3=torso, 4=body. Each can have same or different colors.
+/// @notice Fully onchain 20x20 pixel art NFT. Art matches index.html preview.
+/// @dev Pixel map: 0=background, 1=body, 2=eye. 23 colors per part.
 contract ClawPunks is ERC721, Ownable {
     using Strings for uint256;
 
@@ -18,38 +18,42 @@ contract ClawPunks is ERC721, Ownable {
 
     uint256 private _nextTokenId;
 
-    // Pixel map from generate_grid_svg.py (0=bg, 1=claw, 2=eyes, 3=torso, 4=body)
+    // Pixel map: 0=background, 1=body, 2=eye (matches index.html)
     // 20 rows x 20 cols, row-major
     string private constant PIXEL_MAP =
         "00000000000000000000"
         "00000000000000000000"
         "01000000000000000010"
-        "01100000044000000110"
-        "01101000244200010110"
-        "01111004444440011110"
-        "01111144444444111110"
-        "00111044444444011100"
-        "00000044444444000000"
-        "00000000433400000000"
-        "00000000433400000000"
-        "00000000433400000000"
-        "00000000433400000000"
-        "00000000433400000000"
-        "00000004444440000000"
-        "00000044444444000000"
-        "00000004444440000000"
-        "00000000444400000000"
-        "00000000044000000000"
+        "01100000011000000110"
+        "01101000211200010110"
+        "01111001111110011110"
+        "01111111111111111110"
+        "00111011111111011100"
+        "00000011111111000000"
+        "00000000111100000000"
+        "00000000111100000000"
+        "00000000111100000000"
+        "00000000111100000000"
+        "00000000111100000000"
+        "00000001111110000000"
+        "00000011111111000000"
+        "00000001111110000000"
+        "00000000111100000000"
+        "00000000011000000000"
         "00000000000000000000";
 
-    // 7 colors: black, white, red, yellow, teal, blue, violet
-    string[7] private PALETTE = [
-        "#000000", "#ffffff", "#e53935", "#ffeb3b", "#00897b", "#2196f3", "#8e24aa"
+    // 23 colors (matches index.html)
+    string[23] private PALETTE = [
+        "#000000", "#FFFFFF", "#D32F2F", "#FF6A00", "#FFD100",
+        "#9AFF00", "#00B894", "#0B5D1E", "#00E5FF", "#42A5F5",
+        "#0033A0", "#2E0066", "#7C3AED", "#FF2F92", "#FF8A80",
+        "#6D1B1B", "#5A0000", "#C46210", "#7A8B00", "#6B7C8F",
+        "#263238", "#F3E2B3", "#00FF9C"
     ];
 
     constructor() ERC721("ClawPunks", "CLAW") Ownable(msg.sender) {}
 
-    uint256 public constant PREMINT_BATCH_SIZE = 200;
+    uint256 public constant PREMINT_BATCH_SIZE = 2000;
 
     /// @notice Premint tokens to an address (owner only).
     function premint(address to, uint256 quantity) external onlyOwner {
@@ -61,7 +65,7 @@ contract ClawPunks is ERC721, Ownable {
         }
     }
 
-    /// @notice Premint one batch (200 or remaining) to an address. Call 50 times to mint all 10,000 (owner only).
+    /// @notice Premint one batch (2000 or remaining) to an address. Call 5 times to mint all 10,000 (owner only).
     function premintBatch(address to) external onlyOwner {
         uint256 remaining = MAX_SUPPLY - _nextTokenId;
         require(remaining > 0, "Already fully minted");
@@ -75,30 +79,49 @@ contract ClawPunks is ERC721, Ownable {
 
     /// @notice Get trait indices for a tokenId (for testing, indexers). Pure, no ownership check.
     function getTraits(uint256 tokenId) external pure returns (
-        uint256 bgIdx, uint256 bodyIdx, uint256 torsoIdx, uint256 clawIdx, uint256 eyeIdx
+        uint256 bgIdx, uint256 bodyIdx, uint256 eyeIdx
     ) {
         return _getTraits(tokenId);
     }
 
-    /// @notice Derive trait indices from tokenId (0-6 each). Body, torso, claw can be same or different.
+    /// @notice Derive trait indices from tokenId (0-22 each). Background, body, eyes.
+    /// @dev All three must be distinct (bg != body != eye). 23*22*21 = 10,626 combos for 10k tokens.
     function _getTraits(uint256 tokenId) internal pure returns (
-        uint256 bgIdx, uint256 bodyIdx, uint256 torsoIdx, uint256 clawIdx, uint256 eyeIdx
+        uint256 bgIdx, uint256 bodyIdx, uint256 eyeIdx
     ) {
-        bgIdx = tokenId % 7;
-        bodyIdx = (tokenId / 7) % 7;
-        torsoIdx = (tokenId / 49) % 7;
-        clawIdx = (tokenId / 343) % 7;
-        eyeIdx = (tokenId / 2401) % 7;
+        bgIdx = tokenId % 23;
+        // Body: pick from 22 colors excluding bg
+        uint256 bodySlot = (tokenId / 23) % 22;
+        uint256 count = 0;
+        for (uint256 c = 0; c < 23; c++) {
+            if (c != bgIdx) {
+                if (count == bodySlot) {
+                    bodyIdx = c;
+                    break;
+                }
+                count++;
+            }
+        }
+        // Eye: pick from 21 colors excluding bg and body
+        uint256 eyeSlot = (tokenId / 506) % 21; // 23*22 = 506
+        count = 0;
+        for (uint256 c = 0; c < 23; c++) {
+            if (c != bgIdx && c != bodyIdx) {
+                if (count == eyeSlot) {
+                    eyeIdx = c;
+                    break;
+                }
+                count++;
+            }
+        }
     }
 
-    /// @notice Get color for a pixel type. Body, torso, claw each have independent colors.
+    /// @notice Get color for a pixel type. 0=background, 1=body, 2=eye.
     function _getColor(uint8 pixelType, uint256 tokenId) internal view returns (string memory) {
-        (uint256 bgIdx, uint256 bodyIdx, uint256 torsoIdx, uint256 clawIdx, uint256 eyeIdx) = _getTraits(tokenId);
+        (uint256 bgIdx, uint256 bodyIdx, uint256 eyeIdx) = _getTraits(tokenId);
         if (pixelType == 0) return PALETTE[bgIdx];
-        if (pixelType == 1) return PALETTE[clawIdx];
+        if (pixelType == 1) return PALETTE[bodyIdx];
         if (pixelType == 2) return PALETTE[eyeIdx];
-        if (pixelType == 3) return PALETTE[torsoIdx];
-        if (pixelType == 4) return PALETTE[bodyIdx];
         return PALETTE[bgIdx];
     }
 

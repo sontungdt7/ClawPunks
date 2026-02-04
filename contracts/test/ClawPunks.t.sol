@@ -53,17 +53,17 @@ contract ClawPunksTest is Test {
 
     function test_PremintBatch() public {
         address to = address(0x1);
-        assertEq(clawPunks.PREMINT_BATCH_SIZE(), 200);
+        assertEq(clawPunks.PREMINT_BATCH_SIZE(), 2000);
 
         clawPunks.premintBatch(to);
-        assertEq(clawPunks.balanceOf(to), 200);
+        assertEq(clawPunks.balanceOf(to), 2000);
         assertEq(clawPunks.ownerOf(0), to);
-        assertEq(clawPunks.ownerOf(199), to);
+        assertEq(clawPunks.ownerOf(1999), to);
 
         clawPunks.premintBatch(to);
-        assertEq(clawPunks.balanceOf(to), 400);
+        assertEq(clawPunks.balanceOf(to), 4000);
 
-        for (uint256 i = 0; i < 48; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             clawPunks.premintBatch(to);
         }
         assertEq(clawPunks.balanceOf(to), 10_000);
@@ -73,23 +73,26 @@ contract ClawPunksTest is Test {
         clawPunks.premintBatch(to);
     }
 
-    /// @notice All 10,000 NFTs have valid traits (indices 0-6) and unique color combinations.
+    /// @notice All 10,000 NFTs have valid traits (indices 0-22) and unique color combinations.
     function test_All10000HaveValidAndUniqueTraits() public {
         uint256 maxSupply = clawPunks.MAX_SUPPLY();
         assertEq(maxSupply, 10_000);
 
         for (uint256 tokenId = 0; tokenId < maxSupply; tokenId++) {
-            (uint256 bgIdx, uint256 bodyIdx, uint256 torsoIdx, uint256 clawIdx, uint256 eyeIdx) =
+            (uint256 bgIdx, uint256 bodyIdx, uint256 eyeIdx) =
                 clawPunks.getTraits(tokenId);
 
-            // Rule: each trait index must be 0-6 (valid palette index)
-            assertLe(bgIdx, 6, "bgIdx out of range");
-            assertLe(bodyIdx, 6, "bodyIdx out of range");
-            assertLe(torsoIdx, 6, "torsoIdx out of range");
-            assertLe(clawIdx, 6, "clawIdx out of range");
-            assertLe(eyeIdx, 6, "eyeIdx out of range");
+            // Rule: each trait index must be 0-22 (valid palette index)
+            assertLe(bgIdx, 22, "bgIdx out of range");
+            assertLe(bodyIdx, 22, "bodyIdx out of range");
+            assertLe(eyeIdx, 22, "eyeIdx out of range");
 
-            bytes32 key = keccak256(abi.encodePacked(bgIdx, bodyIdx, torsoIdx, clawIdx, eyeIdx));
+            // Rule: bg, body, eye must all be distinct
+            assertTrue(bgIdx != bodyIdx, "bg must not match body");
+            assertTrue(bgIdx != eyeIdx, "bg must not match eye");
+            assertTrue(bodyIdx != eyeIdx, "body must not match eye");
+
+            bytes32 key = keccak256(abi.encodePacked(bgIdx, bodyIdx, eyeIdx));
             assertFalse(_seenTraitCombo[key], "Duplicate trait combination");
             _seenTraitCombo[key] = true;
         }
