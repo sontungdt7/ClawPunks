@@ -52,9 +52,18 @@ contract ClawPunks is ERC721, ERC721Royalty, Ownable {
         "#263238", "#F3E2B3", "#00FF9C"
     ];
 
+    // Color names in English (index matches PALETTE)
+    string[23] private PALETTE_NAMES = [
+        "Black", "White", "Strong Red", "Orange", "Gold Yellow",
+        "Neon Lime", "Teal Green", "Dark Forest Green", "Cyan", "Sky Blue",
+        "Royal Blue", "Deep Indigo", "Vivid Purple", "Hot Pink", "Coral Pink",
+        "Dark Brick Red", "Blood Maroon", "Burnt Orange/Brown", "Olive Green", "Steel Blue-Gray",
+        "Charcoal Blue-Gray", "Pale Sand", "Mint Neon"
+    ];
+
     uint256 public constant ROYALTY_BPS = 500; // 5%
 
-    constructor() ERC721("ClawPunks", "CLAW") Ownable(msg.sender) {
+    constructor() ERC721("ClawPunks", "CLAWPUNKS") Ownable(msg.sender) {
         _setDefaultRoyalty(msg.sender, uint96(ROYALTY_BPS));
     }
 
@@ -174,12 +183,22 @@ contract ClawPunks is ERC721, ERC721Royalty, Ownable {
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId);
 
+        (uint256 bgIdx, uint256 bodyIdx, uint256 eyeIdx) = _getTraits(tokenId);
+        string memory bgName = PALETTE_NAMES[bgIdx];
+        string memory bodyName = PALETTE_NAMES[bodyIdx];
+        string memory eyeName = PALETTE_NAMES[eyeIdx];
+
         string memory svg = _buildSVG(tokenId);
         string memory imageBase64 = Base64.encode(bytes(svg));
         string memory json = Base64.encode(bytes(string(abi.encodePacked(
             '{"name":"ClawPunk #', tokenId.toString(),
             '","description":"Fully Onchain ClawPunk."',
-            ',"image":"data:image/svg+xml;base64,', imageBase64, '"}'
+            ',"image":"data:image/svg+xml;base64,', imageBase64, '"',
+            ',"attributes":[',
+            '{"trait_type":"Background","value":"', bgName, '"}',
+            ',{"trait_type":"Body","value":"', bodyName, '"}',
+            ',{"trait_type":"Eyes","value":"', eyeName, '"}',
+            ']}'
         ))));
 
         return string(abi.encodePacked("data:application/json;base64,", json));
