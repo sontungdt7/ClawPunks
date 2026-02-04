@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClawPunks — Preview from Contract</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      margin: 0;
+      padding: 1.5rem;
+      min-height: 100vh;
+    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+    .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+    .layout {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .preview-panel {
+      flex: 0 0 auto;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      min-width: 280px;
+    }
+    .preview-panel img,
+    .preview-panel .placeholder {
+      display: block;
+      border-radius: 8px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width: 400px;
+      height: 400px;
+      background: #0f0f1a;
+    }
+    .preview-panel .placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 0.9rem;
+    }
+    .meta { margin-top: 1rem; font-size: 0.85rem; color: #aaa; }
+    .meta strong { color: #ddd; }
+    .controls {
+      flex: 1;
+      min-width: 260px;
+    }
+    .control-group {
+      margin-bottom: 1rem;
+    }
+    .control-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: #aaa;
+      margin-bottom: 0.25rem;
+    }
+    .control-group input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: #0f0f1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #eee;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .control-group input:focus {
+      outline: none;
+      border-color: #2196f3;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      background: #2196f3;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #1976d2; }
+    button:disabled { background: #444; cursor: not-allowed; color: #888; }
+    .error { color: #f44336; font-size: 0.85rem; margin-top: 0.5rem; }
+    .scale-info { font-size: 0.7rem; color: #555; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>ClawPunks — Preview from Contract</h1>
+  <p class="subtitle">Fetch and preview NFT images from the deployed ClawPunks contract on Sepolia.</p>
+
+  <div class="layout">
+    <div class="preview-panel">
+      <div id="preview-container" class="placeholder">Enter token ID and click Load</div>
+      <div id="meta" class="meta" style="display:none;"></div>
+      <p class="scale-info">20×20 → 400×400 px</p>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>Contract Address</label>
+        <input type="text" id="contractAddress" placeholder="0x18c911ab0eca9713474339ac6a1295027024AbAb" />
+      </div>
+      <div class="control-group">
+        <label>RPC URL (Sepolia)</label>
+        <input type="text" id="rpcUrl" placeholder="https://rpc.sepolia.org" />
+      </div>
+      <div class="control-group">
+        <label>Token ID</label>
+        <input type="number" id="tokenId" placeholder="0" min="0" value="0" />
+      </div>
+      <div class="control-group">
+        <button id="loadBtn" onclick="loadToken()">Load NFT</button>
+      </div>
+      <div id="error" class="error"></div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_CONTRACT = "0x18c911ab0eca9713474339ac6a1295027024AbAb";
+    const DEFAULT_RPC = "https://rpc.sepolia.org";
+
+    const ERC721_ABI = [
+      "function tokenURI(uint256 tokenId) view returns (string)"
+    ];
+
+    function getContractAddress() {
+      const v = document.getElementById("contractAddress").value.trim();
+      return v || DEFAULT_CONTRACT;
+    }
+
+    function getRpcUrl() {
+      const v = document.getElementById("rpcUrl").value.trim();
+      return v || DEFAULT_RPC;
+    }
+
+    function setError(msg) {
+      document.getElementById("error").textContent = msg || "";
+    }
+
+    async function loadToken() {
+      const tokenId = document.getElementById("tokenId").value;
+      const btn = document.getElementById("loadBtn");
+      const container = document.getElementById("preview-container");
+      const metaEl = document.getElementById("meta");
+
+      setError("");
+      btn.disabled = true;
+      container.className = "placeholder";
+      container.innerHTML = "Loading…";
+      metaEl.style.display = "none";
+
+      try {
+        const provider = new ethers.JsonRpcProvider(getRpcUrl());
+        const contract = new ethers.Contract(getContractAddress(), ERC721_ABI, provider);
+
+        const uri = await contract.tokenURI(tokenId);
+
+        if (!uri || !uri.startsWith("data:application/json;base64,")) {
+          throw new Error("Unexpected tokenURI format");
+        }
+
+        const base64Json = uri.slice("data:application/json;base64,".length);
+        const jsonStr = atob(base64Json);
+        const data = JSON.parse(jsonStr);
+
+        if (!data.image) {
+          throw new Error("No image in metadata");
+        }
+
+        // data.image is "data:image/svg+xml;base64,..." — use directly as img src
+        const img = document.createElement("img");
+        img.src = data.image;
+        img.alt = data.name || `ClawPunk #${tokenId}`;
+        img.onerror = () => {
+          container.className = "placeholder";
+          container.innerHTML = "Failed to load image";
+        };
+        img.onload = () => {
+          container.innerHTML = "";
+          container.appendChild(img);
+          container.classList.remove("placeholder");
+        };
+
+        metaEl.innerHTML = `
+          <strong>${data.name || `ClawPunk #${tokenId}`}</strong><br>
+          ${data.description || ""}
+        `;
+        metaEl.style.display = "block";
+      } catch (err) {
+        setError(err.message || "Failed to load token");
+        container.className = "placeholder";
+        container.innerHTML = "Error — see message below";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Init defaults
+    document.getElementById("contractAddress").placeholder = DEFAULT_CONTRACT;
+    document.getElementById("rpcUrl").placeholder = DEFAULT_RPC;
+    document.getElementById("tokenId").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") loadToken();
+    });
+  </script>
+</body>
+</html>

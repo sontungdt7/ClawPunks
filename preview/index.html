@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClawPunks Art Preview — 20×20 Grid</title>
+  <title>ClawPunks — All NFTs from Contract</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -14,32 +15,17 @@
       padding: 1.5rem;
       min-height: 100vh;
     }
-    h1 { margin: 0 0 1rem; font-size: 1.25rem; }
-    .layout {
-      display: flex;
-      gap: 2rem;
-      flex-wrap: wrap;
-      align-items: flex-start;
-    }
-    .preview {
-      flex: 0 0 auto;
-      background: #16213e;
-      border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-    .preview svg {
-      display: block;
-      border-radius: 8px;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+    .subtitle { font-size: 0.85rem; color: #888; margin-bottom: 1rem; }
     .controls {
-      flex: 1;
-      min-width: 220px;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 1.5rem;
     }
     .control-group {
-      margin-bottom: 1rem;
+      flex: 0 0 auto;
     }
     .control-group label {
       display: block;
@@ -47,147 +33,226 @@
       color: #aaa;
       margin-bottom: 0.25rem;
     }
-    .color-swatches {
-      display: flex;
-      gap: 0.35rem;
-      flex-wrap: wrap;
-    }
-    .color-swatch {
-      width: 28px;
-      height: 28px;
+    .control-group input {
+      padding: 0.5rem 0.75rem;
+      background: #0f0f1a;
+      border: 1px solid #333;
       border-radius: 6px;
-      border: 2px solid rgba(255,255,255,0.2);
-      cursor: pointer;
+      color: #eee;
+      font-family: monospace;
+      font-size: 0.85rem;
+      min-width: 320px;
     }
-    .color-swatch:hover { border-color: #888; }
-    .color-swatch.selected { border-color: #fff; box-shadow: 0 0 0 1px #333; }
-    .info { font-size: 0.75rem; color: #666; margin-top: 1rem; }
-    .scale-info { font-size: 0.7rem; color: #555; margin-top: 0.5rem; }
+    .control-group input:focus {
+      outline: none;
+      border-color: #2196f3;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      background: #2196f3;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { background: #1976d2; }
+    button:disabled { background: #444; cursor: not-allowed; color: #888; }
+    .status { font-size: 0.85rem; color: #888; margin-bottom: 1rem; }
+    .error { color: #f44336; font-size: 0.85rem; margin-top: 0.5rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .nft-card {
+      background: #16213e;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform 0.15s;
+    }
+    .nft-card:hover { transform: scale(1.03); }
+    .nft-card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .nft-card .label {
+      padding: 0.4rem 0.5rem;
+      font-size: 0.75rem;
+      color: #aaa;
+      text-align: center;
+    }
+    .nft-card .desc {
+      padding: 0 0.5rem 0.35rem;
+      font-size: 0.7rem;
+      color: #888;
+      line-height: 1.3;
+    }
+    .nft-card .attrs {
+      padding: 0 0.5rem 0.5rem;
+      font-size: 0.68rem;
+      color: #999;
+    }
+    .nft-card .attrs span {
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+    .placeholder-card {
+      background: #0f0f1a;
+      border-radius: 8px;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #444;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
 <body>
-  <h1>ClawPunks Art Preview — 20×20 Grid</h1>
-  <p class="info">Same layout as generate_grid_svg.py. Body, torso, claw can share a color or differ. 7 colors each.</p>
+  <h1>ClawPunks — All NFTs from Contract</h1>
+  <p class="subtitle">Load and display all minted NFTs. No token ID needed.</p>
 
-  <div class="layout">
-    <div class="preview">
-      <div id="svg-container"></div>
-      <p class="scale-info">20×20 → 400×400 px</p>
+  <div class="controls">
+    <div class="control-group">
+      <label>Contract Address</label>
+      <input type="text" id="contractAddress" placeholder="0xd99aDFa07f97C444DCDddAA70B3c58A9d33124EE" />
     </div>
-    <div class="controls">
-      <div class="control-group" data-trait="bg">
-        <label>Background</label>
-        <div class="color-swatches" id="bgSwatches"></div>
-      </div>
-      <div class="control-group" data-trait="body">
-        <label>Body</label>
-        <div class="color-swatches" id="bodySwatches"></div>
-      </div>
-      <div class="control-group" data-trait="torso">
-        <label>Torso</label>
-        <div class="color-swatches" id="torsoSwatches"></div>
-      </div>
-      <div class="control-group" data-trait="claw">
-        <label>Claw</label>
-        <div class="color-swatches" id="clawSwatches"></div>
-      </div>
-      <div class="control-group" data-trait="eyes">
-        <label>Eyes</label>
-        <div class="color-swatches" id="eyesSwatches"></div>
-      </div>
+    <div class="control-group">
+      <label>RPC URL (Sepolia)</label>
+      <input type="text" id="rpcUrl" placeholder="https://rpc.sepolia.org" />
+    </div>
+    <div class="control-group">
+      <button id="loadBtn" onclick="loadAllNFTs()">Load All NFTs</button>
     </div>
   </div>
+  <div id="status" class="status"></div>
+  <div id="error" class="error"></div>
+  <div id="grid" class="grid"></div>
 
   <script>
-    // 7 colors only: black, white, red, yellow, teal, blue, violet
-    const PALETTE = [
-      { name: "Black", hex: "#000000" },
-      { name: "White", hex: "#ffffff" },
-      { name: "Red", hex: "#e53935" },
-      { name: "Yellow", hex: "#ffeb3b" },
-      { name: "Teal", hex: "#00897b" },
-      { name: "Blue", hex: "#2196f3" },
-      { name: "Violet", hex: "#8e24aa" },
-    ];
+    const DEFAULT_CONTRACT = "0xd99aDFa07f97C444DCDddAA70B3c58A9d33124EE";
+    const DEFAULT_RPC = "https://rpc.sepolia.org";
+    const MAX_SUPPLY = 10000;
 
-    // 20×20 pixel map from generate_grid_svg.py
-    // 0=bg, 1=claw, 2=eyes, 3=torso, 4=body (each can have same or different colors)
-    const PIXEL_MAP = [
-      "00000000000000000000",
-      "00000000000000000000",
-      "01000000000000000010",
-      "01100000044000000110",
-      "01101000244200010110",
-      "01111004444440011110",
-      "01111144444444111110",
-      "00111044444444011100",
-      "00000044444444000000",
-      "00000000433400000000",
-      "00000000433400000000",
-      "00000000433400000000",
-      "00000000433400000000",
-      "00000000433400000000",
-      "00000004444440000000",
-      "00000044444444000000",
-      "00000004444440000000",
-      "00000000444400000000",
-      "00000000044000000000",
-      "00000000000000000000",
-    ];
+    const ERC721_ABI = ["function tokenURI(uint256 tokenId) view returns (string)"];
 
-    // Default selection: indices into PALETTE (0-6)
-    let selected = { bg: 1, body: 2, torso: 2, claw: 2, eyes: 3 };
-
-    const W = 20, H = 20, PIXEL = 20;
-
-    function createSwatches(traitId) {
-      const container = document.getElementById(traitId + "Swatches");
-      container.innerHTML = "";
-      PALETTE.forEach((col, i) => {
-        const swatch = document.createElement("div");
-        swatch.className = "color-swatch" + (selected[traitId] === i ? " selected" : "");
-        swatch.style.background = col.hex;
-        swatch.title = col.name;
-        swatch.dataset.index = i;
-        swatch.addEventListener("click", () => {
-          selected[traitId] = i;
-          container.querySelectorAll(".color-swatch").forEach((s, j) => s.classList.toggle("selected", j === i));
-          render();
-        });
-        container.appendChild(swatch);
-      });
+    function getContractAddress() {
+      const v = document.getElementById("contractAddress").value.trim();
+      return v || DEFAULT_CONTRACT;
     }
 
-    function buildSVG(bg, body, torso, claw, eyes) {
-      const colors = [bg, claw, eyes, torso, body]; // 0=bg, 1=claw, 2=eyes, 3=torso, 4=body
-      let rects = "";
-      for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-          const c = parseInt(PIXEL_MAP[y][x], 10);
-          const fill = colors[c];
-          const px = x * PIXEL;
-          const py = y * PIXEL;
-          rects += `<rect x="${px}" y="${py}" width="${PIXEL}" height="${PIXEL}" fill="${fill}" stroke="#cccccc" stroke-width="0.5"/>`;
+    function getRpcUrl() {
+      const v = document.getElementById("rpcUrl").value.trim();
+      return v || DEFAULT_RPC;
+    }
+
+    function setStatus(msg) {
+      document.getElementById("status").textContent = msg || "";
+    }
+
+    function setError(msg) {
+      document.getElementById("error").textContent = msg || "";
+    }
+
+    async function findTotalMinted(contract) {
+      let lo = 0, hi = MAX_SUPPLY;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        try {
+          await contract.tokenURI(mid);
+          lo = mid;
+        } catch {
+          hi = mid - 1;
         }
       }
-      const size = W * PIXEL;
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">
-  <rect width="100%" height="100%" fill="${bg}"/>
-  ${rects}
-</svg>`;
+      return lo + 1;
     }
 
-    function render() {
-      const bg = PALETTE[selected.bg].hex;
-      const body = PALETTE[selected.body].hex;
-      const torso = PALETTE[selected.torso].hex;
-      const claw = PALETTE[selected.claw].hex;
-      const eyes = PALETTE[selected.eyes].hex;
-      document.getElementById("svg-container").innerHTML = buildSVG(bg, body, torso, claw, eyes);
-    }
+    async function loadAllNFTs() {
+      const btn = document.getElementById("loadBtn");
+      const grid = document.getElementById("grid");
 
-    ["bg", "body", "torso", "claw", "eyes"].forEach(createSwatches);
-    render();
+      setError("");
+      btn.disabled = true;
+      grid.innerHTML = "";
+
+      try {
+        setStatus("Connecting…");
+        const provider = new ethers.JsonRpcProvider(getRpcUrl());
+        const contract = new ethers.Contract(getContractAddress(), ERC721_ABI, provider);
+
+        setStatus("Finding total minted…");
+        const totalMinted = await findTotalMinted(contract);
+        if (totalMinted === 0) {
+          setStatus("No NFTs minted yet.");
+          return;
+        }
+
+        setStatus(`Loading ${totalMinted} NFTs…`);
+        const results = await Promise.allSettled(
+          Array.from({ length: totalMinted }, (_, i) =>
+            contract.tokenURI(i).then(uri => ({ tokenId: i, uri }))
+          )
+        );
+
+        const nfts = results
+          .filter(r => r.status === "fulfilled")
+          .map(r => r.value);
+
+        setStatus(`Showing ${nfts.length} NFTs`);
+
+        for (const { tokenId, uri } of nfts) {
+          if (!uri || !uri.startsWith("data:application/json;base64,")) continue;
+          const base64Json = uri.slice("data:application/json;base64,".length);
+          const data = JSON.parse(atob(base64Json));
+          if (!data.image) continue;
+
+          const card = document.createElement("div");
+          card.className = "nft-card";
+          const img = document.createElement("img");
+          img.src = data.image;
+          img.alt = data.name || `ClawPunk #${tokenId}`;
+          img.loading = "lazy";
+          const label = document.createElement("div");
+          label.className = "label";
+          label.textContent = data.name || `#${tokenId}`;
+          card.appendChild(img);
+          card.appendChild(label);
+
+          if (data.description) {
+            const desc = document.createElement("div");
+            desc.className = "desc";
+            desc.textContent = data.description;
+            card.appendChild(desc);
+          }
+
+          if (data.attributes && data.attributes.length > 0) {
+            const attrs = document.createElement("div");
+            attrs.className = "attrs";
+            data.attributes.forEach(a => {
+              const span = document.createElement("span");
+              span.textContent = `${a.trait_type}: ${a.value}`;
+              attrs.appendChild(span);
+            });
+            card.appendChild(attrs);
+          }
+
+          grid.appendChild(card);
+        }
+      } catch (err) {
+        setError(err.message || "Failed to load NFTs");
+        setStatus("");
+      } finally {
+        btn.disabled = false;
+      }
+    }
   </script>
 </body>
 </html>

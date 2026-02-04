@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Validate all 10,000 ClawPunks NFTs:
-1. Each trait index is 0-6 (valid palette)
+1. Each trait index is 0-22 (valid palette)
 2. All 10,000 have unique color combinations
-3. All SVG fill colors are from the 7-color palette
+3. All SVG fill colors are from the 23-color palette
 
 Usage:
   python scripts/validate_all_nfts.py
@@ -21,58 +21,65 @@ from pathlib import Path
 # Add project root
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# Must match ClawPunks.sol exactly
+# Must match ClawPunks.sol exactly (3 parts: background, body, eyes; 23 colors)
 PALETTE = [
-    "#000000", "#ffffff", "#e53935", "#ffeb3b", "#00897b", "#2196f3", "#8e24aa",
+    "#000000", "#FFFFFF", "#D32F2F", "#FF6A00", "#FFD100",
+    "#9AFF00", "#00B894", "#0B5D1E", "#00E5FF", "#42A5F5",
+    "#0033A0", "#2E0066", "#7C3AED", "#FF2F92", "#FF8A80",
+    "#6D1B1B", "#5A0000", "#C46210", "#7A8B00", "#6B7C8F",
+    "#263238", "#F3E2B3", "#00FF9C",
 ]
 PIXEL_MAP = [
     "00000000000000000000",
     "00000000000000000000",
     "01000000000000000010",
-    "01100000044000000110",
-    "01101000244200010110",
-    "01111004444440011110",
-    "01111144444444111110",
-    "00111044444444011100",
-    "00000044444444000000",
-    "00000000433400000000",
-    "00000000433400000000",
-    "00000000433400000000",
-    "00000000433400000000",
-    "00000000433400000000",
-    "00000004444440000000",
-    "00000044444444000000",
-    "00000004444440000000",
-    "00000000444400000000",
-    "00000000044000000000",
+    "01100000011000000110",
+    "01101000222200010110",
+    "01111001111110011110",
+    "01111111111111111110",
+    "00111011111111011100",
+    "00000011111111000000",
+    "00000000111100000000",
+    "00000000111100000000",
+    "00000000111100000000",
+    "00000000111100000000",
+    "00000000111100000000",
+    "00000001111110000000",
+    "00000011111111000000",
+    "00000001111110000000",
+    "00000000111100000000",
+    "00000000011000000000",
     "00000000000000000000",
 ]
 MAX_SUPPLY = 10_000
 
 
-def get_traits(token_id: int) -> tuple[int, int, int, int, int]:
-    """Replicate contract _getTraits. Returns (bgIdx, bodyIdx, torsoIdx, clawIdx, eyeIdx)."""
-    bg_idx = token_id % 7
-    body_idx = (token_id // 7) % 7
-    torso_idx = (token_id // 49) % 7
-    claw_idx = (token_id // 343) % 7
-    eye_idx = (token_id // 2401) % 7
-    return (bg_idx, body_idx, torso_idx, claw_idx, eye_idx)
+def get_traits(token_id: int) -> tuple[int, int, int]:
+    """Replicate contract _getTraits. Returns (bgIdx, bodyIdx, eyeIdx)."""
+    bg_idx = token_id % 23
+    body_idx = (token_id // 23) % 23
+    # Eye: pick from 22 colors excluding bodyIdx. Ensures eye != body and uniqueness.
+    eye_slot = (token_id // 529) % 22
+    eye_idx = 0
+    count = 0
+    for c in range(23):
+        if c != body_idx:
+            if count == eye_slot:
+                eye_idx = c
+                break
+            count += 1
+    return (bg_idx, body_idx, eye_idx)
 
 
 def get_color(pixel_type: int, token_id: int) -> str:
-    """Replicate contract _getColor."""
-    bg_idx, body_idx, torso_idx, claw_idx, eye_idx = get_traits(token_id)
+    """Replicate contract _getColor. 0=background, 1=body, 2=eye."""
+    bg_idx, body_idx, eye_idx = get_traits(token_id)
     if pixel_type == 0:
         return PALETTE[bg_idx]
     if pixel_type == 1:
-        return PALETTE[claw_idx]
+        return PALETTE[body_idx]
     if pixel_type == 2:
         return PALETTE[eye_idx]
-    if pixel_type == 3:
-        return PALETTE[torso_idx]
-    if pixel_type == 4:
-        return PALETTE[body_idx]
     return PALETTE[bg_idx]
 
 
@@ -106,25 +113,27 @@ def main() -> int:
     violations: list[str] = []
 
     for token_id in range(MAX_SUPPLY):
-        # 1. Trait validity (0-6)
-        bg, body, torso, claw, eye = get_traits(token_id)
+        # 1. Trait validity (0-22)
+        bg, body, eye = get_traits(token_id)
         for name, idx in [
             ("bg", bg),
             ("body", body),
-            ("torso", torso),
-            ("claw", claw),
             ("eye", eye),
         ]:
-            if not 0 <= idx <= 6:
+            if not 0 <= idx <= 22:
                 violations.append(f"Token {token_id}: {name}Idx={idx} out of range")
 
-        # 2. Uniqueness
-        combo = (bg, body, torso, claw, eye)
+        # 2. Eyes must not match body
+        if eye == body:
+            violations.append(f"Token {token_id}: eyes must not match body")
+
+        # 3. Uniqueness
+        combo = (bg, body, eye)
         if combo in seen_combos:
             violations.append(f"Token {token_id}: duplicate combo {combo}")
         seen_combos.add(combo)
 
-        # 3. SVG colors from palette only
+        # 4. SVG colors from palette only
         svg = build_svg(token_id)
         fills = extract_fill_colors(svg)
         for f in fills:
@@ -140,9 +149,9 @@ def main() -> int:
         return 1
 
     print("All 10,000 NFTs validated:")
-    print("  - All trait indices in 0-6")
+    print("  - All trait indices in 0-22")
     print("  - All 10,000 color combinations unique")
-    print("  - All SVG fill colors from 7-color palette")
+    print("  - All SVG fill colors from 23-color palette")
     return 0
 
 

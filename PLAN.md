@@ -148,12 +148,15 @@ ClawPunks/
 │   └── ClawPunksTraits.sol    # (Optional) Trait SVG fragments / color palettes
 ├── deploy/
 │   └── deploy_clawpunks.ts    # Deploy to Sepolia / mainnet
-├── server/                    # Backend API for airdrop
-│   ├── api/
-│   │   └── airdrop/           # POST: wallet address -> transfer ClawPunk
-│   ├── lib/
-│   │   └── clawpunks.ts       # Contract interaction (viem/ethers)
-│   └── db/                    # Track claimed wallets, next tokenId to send
+├── server/                    # Twitter bot for airdrop
+│   ├── src/
+│   │   ├── index.ts           # Entry point
+│   │   ├── twitter.ts         # Stream mentions, parse claims, reply
+│   │   ├── airdrop.ts         # Execute transfer, ERC8004 check
+│   │   ├── erc8004.ts         # ERC8004 registry verification
+│   │   ├── db.ts              # SQLite: track claimed wallets
+│   │   └── config.ts          # Env config
+│   └── claims.db              # SQLite DB (created at runtime)
 ├── hardhat.config.ts          # Sepolia + mainnet
 ├── PLAN.md                    # This file
 └── package.json
@@ -176,12 +179,17 @@ Contract -> Agent: ClawPunk NFT transferred
 - Server (backend) holds admin key or uses relayer; calls `transferFrom(owner, agentWallet, tokenId)` or `safeTransferFrom` to send ClawPunk to agent
 - Backend needs: approved API auth, rate limiting, duplicate-claim prevention (track which tokenIds already airdropped)
 
-### 4. Backend API (airdrop)
+### 4. Airdrop (Twitter Bot)
 
-- Endpoint: `POST /api/airdrop` with `{ "wallet": "0x..." }`
-- Auth: API key or Claw agent auth (to prevent abuse)
-- Logic: Assign next available tokenId from preminted pool, call `safeTransferFrom(owner, wallet, tokenId)`, record claim in DB
-- Requires: Server wallet with ETH for gas, owner's private key or `approve` + relayer
+- **Trigger**: Mention `@fomo4claw_bot` with format:
+  ```
+  #ClawPunkAirdrop
+  Agent Wallet: 0x....
+  ```
+- **Server** (`server/`): Listens to Twitter filtered stream, parses mentions
+- **Checks**: (1) Wallet has not claimed before; (2) Wallet registered with ERC8004 on Ethereum
+- **Action**: `safeTransferFrom(airdropWallet, agentWallet, tokenId)` — server holds preminted NFTs
+- **Reply**: `Airdropped ClawPunk #tokenId to "0x...".`
 
 ### 5. Deployment
 
