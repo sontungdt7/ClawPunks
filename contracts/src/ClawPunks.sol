@@ -2,14 +2,15 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title ClawPunks
-/// @notice Fully onchain 20x20 pixel art NFT. Art matches index.html preview.
+/// @notice Fully onchain 20x20 pixel art NFT. Art matches index.html preview. 5% royalty (EIP-2981).
 /// @dev Pixel map: 0=background, 1=body, 2=eye. 23 colors per part.
-contract ClawPunks is ERC721, Ownable {
+contract ClawPunks is ERC721, ERC721Royalty, Ownable {
     using Strings for uint256;
 
     uint256 public constant MAX_SUPPLY = 10_000;
@@ -51,7 +52,20 @@ contract ClawPunks is ERC721, Ownable {
         "#263238", "#F3E2B3", "#00FF9C"
     ];
 
-    constructor() ERC721("ClawPunks", "CLAW") Ownable(msg.sender) {}
+    uint256 public constant ROYALTY_BPS = 500; // 5%
+
+    constructor() ERC721("ClawPunks", "CLAW") Ownable(msg.sender) {
+        _setDefaultRoyalty(msg.sender, uint96(ROYALTY_BPS));
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, ERC721Royalty) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
+
+    /// @notice Set royalty receiver (owner only). Fee remains fixed at 5%.
+    function setRoyaltyReceiver(address receiver) external onlyOwner {
+        _setDefaultRoyalty(receiver, uint96(ROYALTY_BPS));
+    }
 
     uint256 public constant PREMINT_BATCH_SIZE = 2000;
 
@@ -164,7 +178,7 @@ contract ClawPunks is ERC721, Ownable {
         string memory imageBase64 = Base64.encode(bytes(svg));
         string memory json = Base64.encode(bytes(string(abi.encodePacked(
             '{"name":"ClawPunk #', tokenId.toString(),
-            '","description":"Fully onchain ClawPunk. 20x20 pixel art."',
+            '","description":"Fully Onchain ClawPunk."',
             ',"image":"data:image/svg+xml;base64,', imageBase64, '"}'
         ))));
 

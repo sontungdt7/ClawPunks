@@ -73,6 +73,22 @@ contract ClawPunksTest is Test {
         clawPunks.premintBatch(to);
     }
 
+    function test_RoyaltyInfo() public {
+        clawPunks.premint(address(0x1), 1);
+        (address receiver, uint256 amount) = clawPunks.royaltyInfo(0, 1 ether);
+        assertEq(receiver, clawPunks.owner());
+        assertEq(amount, 0.05 ether); // 5% of 1 ether
+    }
+
+    function test_SetRoyaltyReceiver() public {
+        address newReceiver = address(0x42);
+        clawPunks.setRoyaltyReceiver(newReceiver);
+        clawPunks.premint(address(0x1), 1);
+        (address receiver, uint256 amount) = clawPunks.royaltyInfo(0, 1 ether);
+        assertEq(receiver, newReceiver);
+        assertEq(amount, 0.05 ether); // fee unchanged at 5%
+    }
+
     /// @notice All 10,000 NFTs have valid traits (indices 0-22) and unique color combinations.
     function test_All10000HaveValidAndUniqueTraits() public {
         uint256 maxSupply = clawPunks.MAX_SUPPLY();
