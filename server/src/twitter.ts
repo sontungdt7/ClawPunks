@@ -5,14 +5,22 @@ import { isTweetProcessed, markTweetProcessed } from "./db.js";
 
 const BOT_HANDLE = config.twitter.botHandle;
 
-// OAuth 1.0a User Context - for search (Basic/Free) and posting replies
-const userClient = new TwitterApi({
+// OAuth 1.0a User Context - lazy init when Twitter is actually used
+let userClient: TwitterApi | null = null;
+function getTwitterClient(): TwitterApi {
+  if (!userClient) {
+    if (!config.twitter.apiKey || !config.twitter.apiSecret) {
+      throw new Error("Twitter API credentials required when TWITTER_POLLING_ENABLED=true");
+    }
+    userClient = new TwitterApi({
   appKey: config.twitter.apiKey,
   appSecret: config.twitter.apiSecret,
-  accessToken: config.twitter.accessToken,
-  accessSecret: config.twitter.accessSecret,
-});
-const rwClient = userClient.readWrite;
+    accessToken: config.twitter.accessToken,
+    accessSecret: config.twitter.accessSecret,
+  });
+  }
+  return userClient;
+}
 
 /**
  * Parse mention text for claim format:
@@ -46,7 +54,7 @@ export async function handleMention(tweet: {
     : `Airdrop failed: ${result.reason}.`;
 
   try {
-    await rwClient.v2.reply(replyText, tweet.id);
+    await getTwitterClient().readWrite.v2.reply(replyText, tweet.id);
     console.log(`[Reply] ${replyText}`);
   } catch (err) {
     console.error("Failed to reply:", err);
@@ -62,7 +70,7 @@ let claimLock: Promise<void> = Promise.resolve();
  */
 async function pollMentions(): Promise<number> {
   try {
-    const paginator = await rwClient.v2.search(`@${BOT_HANDLE}`, {
+    const paginator = await getTwitterClient().readWrite.v2.search(`@${BOT_HANDLE}`, {
       "tweet.fields": ["author_id", "created_at"],
       expansions: ["author_id"],
       max_results: 100,

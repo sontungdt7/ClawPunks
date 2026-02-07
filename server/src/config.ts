@@ -17,12 +17,23 @@ function getEnvInt(name: string, def: number): number {
 
 export const config = {
   twitter: {
-    apiKey: requireEnv("TWITTER_API_KEY"),
-    apiSecret: requireEnv("TWITTER_API_SECRET"),
-    accessToken: requireEnv("TWITTER_ACCESS_TOKEN"),
-    accessSecret: requireEnv("TWITTER_ACCESS_SECRET"),
+    enabled: process.env.TWITTER_POLLING_ENABLED === "true",
+    apiKey: getEnv("TWITTER_API_KEY", ""),
+    apiSecret: getEnv("TWITTER_API_SECRET", ""),
+    accessToken: getEnv("TWITTER_ACCESS_TOKEN", ""),
+    accessSecret: getEnv("TWITTER_ACCESS_SECRET", ""),
     botHandle: "fomo4claw_bot",
-    pollIntervalMs: getEnvInt("POLL_INTERVAL_MS", 900_000), // 15 min default (Free tier: 1 req/15min)
+    pollIntervalMs: getEnvInt("POLL_INTERVAL_MS", 900_000),
+  },
+  moltbook: {
+    enabled: true,
+    mode: (getEnv("MOLTBOOK_MODE", "posts") as "posts" | "comments") === "comments" ? "comments" : "posts",
+    postId: getEnv(
+      "MOLTBOOK_POST_ID",
+      "460edcbf-39e6-41b9-81f9-67e182dfd911"
+    ),
+    apiKey: getEnv("MOLTBOOK_API_KEY", ""),
+    pollIntervalMs: getEnvInt("MOLTBOOK_POLL_INTERVAL_MS", 60_000), // 1 min default
   },
   ethereum: {
     rpcUrl: getEnv("ETHEREUM_RPC_URL", "https://eth.llamarpc.com"),

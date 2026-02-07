@@ -17,8 +17,8 @@ forge test
 ## Deploy
 
 ```bash
-# Set PRIVATE_KEY or DEPLOYER_PRIVATE_KEY
-forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast
+# Set PRIVATE_KEY or DEPLOYER_PRIVATE_KEY and SEPOLIA_RPC_URL (in .env or env)
+forge script script/Deploy.s.sol --rpc-url sepolia --broadcast --chain-id 11155111
 ```
 
 ## Features

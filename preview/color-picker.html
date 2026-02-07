@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClawPunks — Color Picker</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "JetBrains Mono", "Fira Code", monospace;
+      background: #0d1117;
+      color: #e6edf3;
+      margin: 0;
+      padding: 1.5rem;
+      min-height: 100vh;
+    }
+    h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: #8b949e;
+      margin-bottom: 1.5rem;
+    }
+    .layout {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+    .preview-panel {
+      flex: 0 0 auto;
+      background: #161b22;
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid #30363d;
+      min-width: 280px;
+    }
+    .preview-panel svg {
+      display: block;
+      border-radius: 8px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width: 400px;
+      height: 400px;
+      max-width: 100%;
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .preview-item {
+      background: #161b22;
+      border-radius: 8px;
+      padding: 0.75rem;
+      border: 1px solid #30363d;
+    }
+    .preview-panel > label,
+    .preview-item label {
+      display: block;
+      font-size: 0.7rem;
+      color: #8b949e;
+      margin-bottom: 0.5rem;
+    }
+    .preview-item svg {
+      width: 100%;
+      height: auto;
+      max-width: 200px;
+    }
+    .controls {
+      flex: 1;
+      min-width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .control-group {
+      background: #161b22;
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid #30363d;
+    }
+    .control-group label {
+      display: block;
+      font-size: 0.7rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .color-row input[type="color"] {
+      width: 48px;
+      height: 48px;
+      padding: 4px;
+      border: 2px solid #30363d;
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
+    }
+    .color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+    .color-row input[type="color"]::-webkit-color-swatch { border-radius: 4px; }
+    .color-row input[type="text"] {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+    .color-row input[type="text"]:focus {
+      outline: none;
+      border-color: #58a6ff;
+    }
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .preset-btn {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.1s, border-color 0.1s;
+    }
+    .preset-btn:hover {
+      transform: scale(1.1);
+      border-color: #58a6ff;
+    }
+    .preset-label {
+      font-size: 0.65rem;
+      color: #6e7681;
+      margin-top: 0.25rem;
+    }
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 0.6rem 1rem;
+      background: #238636;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:hover { background: #2ea043; }
+    button.secondary {
+      background: #21262d;
+      color: #e6edf3;
+    }
+    button.secondary:hover { background: #30363d; }
+  </style>
+</head>
+<body>
+  <h1>ClawPunks — Color Picker</h1>
+  <p class="subtitle">Change body, eyes, and background colors to preview different ClawPunk combinations.</p>
+
+  <div class="layout">
+    <div class="preview-panel">
+      <label>Default</label>
+      <div id="preview"></div>
+      <div class="preview-grid">
+        <div class="preview-item">
+          <label>Builder</label>
+          <div id="preview-builder"></div>
+        </div>
+        <div class="preview-item">
+          <label>Leader</label>
+          <div id="preview-leader"></div>
+        </div>
+        <div class="preview-item">
+          <label>Sage</label>
+          <div id="preview-sage"></div>
+        </div>
+      </div>
+      <label style="margin-top: 1.5rem;">Natural (numbers)</label>
+      <div class="preview-grid">
+        <div class="preview-item">
+          <label>Seeker</label>
+          <div id="preview-natural-seeker"></div>
+        </div>
+        <div class="preview-item">
+          <label>Builder</label>
+          <div id="preview-natural-builder"></div>
+        </div>
+        <div class="preview-item">
+          <label>Leader</label>
+          <div id="preview-natural-leader"></div>
+        </div>
+        <div class="preview-item">
+          <label>Sage</label>
+          <div id="preview-natural-sage"></div>
+        </div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <label>Background</label>
+        <div class="color-row">
+          <input type="color" id="bgColor" value="#ffffff" />
+          <input type="text" id="bgHex" value="#ffffff" maxlength="7" />
+        </div>
+        <div class="presets" id="bgPresets"></div>
+      </div>
+      <div class="control-group">
+        <label>Body</label>
+        <div class="color-row">
+          <input type="color" id="bodyColor" value="#00B894" />
+          <input type="text" id="bodyHex" value="#00B894" maxlength="7" />
+        </div>
+        <div class="presets" id="bodyPresets"></div>
+      </div>
+      <div class="control-group">
+        <label>Eyes</label>
+        <div class="color-row">
+          <input type="color" id="eyeColor" value="#e53935" />
+          <input type="text" id="eyeHex" value="#e53935" maxlength="7" />
+        </div>
+        <div class="presets" id="eyePresets"></div>
+      </div>
+      <div class="control-group">
+        <label>Actions</label>
+        <div class="actions">
+          <button onclick="copySVG()">Copy SVG</button>
+          <button class="secondary" onclick="downloadPNG()">Download PNG</button>
+          <button class="secondary" onclick="randomize()">Random</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Pixel map from ClawPunks.sol: 0=background, 1=body, 2=eye
+    const PIXEL_MAP_SEEKER =
+      "00000000000000000000" +
+      "00000000000000000000" +
+      "00000000100100000000" +
+      "00100000011000000100" +
+      "00101002211220010100" +
+      "00111001111110011100" +
+      "00111111111111111100" +
+      "00000011111111000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000000011000000000" +
+      "00000000000000000000" +
+      "00000000000000000000";
+    //Builder
+    const PIXEL_MAP_BUILDER =
+      "00000000000000000000" +
+      "00000011000011000000" +
+      "01000000100100000010" +
+      "01100000011000000110" +
+      "01101002211220010110" +
+      "01111001111110011110" +
+      "01111111111111111110" +
+      "00000011111111000000" +
+      "00000011111111000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000011111111000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000000011000000000" +
+      "00000000000000000000";
+
+    //Leader
+    const PIXEL_MAP_LEADER =
+      "00000000000000000000" +
+      "00001111000011110000" +
+      "01000000100100000010" +
+      "01100000011000000110" +
+      "01101002211220010110" +
+      "01111001111110011110" +
+      "01111111111111111110" +
+      "00111011111111011100" +
+      "00000011111111000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000011111111000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000000011000000000" +
+      "00000000000000000000";
+
+    const PIXEL_MAP_SAGE =
+      "00000000000000000000" +
+      "01111111000011111110" +
+      "00000000100100000000" +
+      "00100000011000000100" +
+      "00101002211220010100" +
+      "00111002211220011100" +
+      "00111111111111111100" +
+      "00111011111111011100" +
+      "00000011111111000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000001111110000000" +
+      "00000011111111000000" +
+      "00000001111110000000" +
+      "00000000111100000000" +
+      "00000000011000000000" +
+      "00000000000000000000";
+
+    const PALETTE = [
+      "#000000", // Black
+      "#FFFFFF", // White
+      "#E10600", // Red
+      "#FFB000", // Yellow
+      "#00A000", // Green
+      "#0047FF", // Blue
+      "#8B5A2B"  // Brown
+    ];
+
+    const GRID_SIZE = 20;
+    const PIXEL = 20;
+
+    function getColors() {
+      return {
+        bg: document.getElementById("bgHex").value.trim() || "#ffffff",
+        body: document.getElementById("bodyHex").value.trim() || "#00B894",
+        eye: document.getElementById("eyeHex").value.trim() || "#e53935"
+      };
+    }
+
+    function normalizeHex(hex) {
+      hex = hex.replace(/^#/, "");
+      if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      }
+      return hex.length === 6 ? "#" + hex : null;
+    }
+
+    function buildSVG(colors, pixelMap) {
+      const map = pixelMap || PIXEL_MAP_SEEKER;
+      const w = GRID_SIZE * PIXEL;
+      const h = GRID_SIZE * PIXEL;
+      let rects = "";
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const idx = y * GRID_SIZE + x;
+          const pixelType = parseInt(map[idx], 10);
+          const fill = pixelType === 0 ? colors.bg : pixelType === 1 ? colors.body : colors.eye;
+          const px = x * PIXEL;
+          const py = y * PIXEL;
+          rects += `<rect x="${px}" y="${py}" width="${PIXEL}" height="${PIXEL}" fill="${fill}" stroke="#cccccc" stroke-width="0.5"/>`;
+        }
+      }
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${rects}</svg>`;
+    }
+
+    function buildSVGAsNumbers(pixelMap) {
+      const map = pixelMap || PIXEL_MAP_SEEKER;
+      const w = GRID_SIZE * PIXEL;
+      const h = GRID_SIZE * PIXEL;
+      let texts = "";
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const idx = y * GRID_SIZE + x;
+          const char = map[idx];
+          const px = x * PIXEL + (PIXEL / 2);
+          const py = y * PIXEL + (PIXEL * 3 / 4);
+          texts += `<text x="${px}" y="${py}" font-family="monospace" font-size="14" fill="#000000" text-anchor="middle">${char}</text>`;
+        }
+      }
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="#ffffff"/>${texts}</svg>`;
+    }
+
+    function render() {
+      const colors = getColors();
+      document.getElementById("preview").innerHTML = buildSVG(colors, PIXEL_MAP_SEEKER);
+      document.getElementById("preview-builder").innerHTML = buildSVG(colors, PIXEL_MAP_BUILDER);
+      document.getElementById("preview-leader").innerHTML = buildSVG(colors, PIXEL_MAP_LEADER);
+      document.getElementById("preview-sage").innerHTML = buildSVG(colors, PIXEL_MAP_SAGE);
+      document.getElementById("preview-natural-seeker").innerHTML = buildSVGAsNumbers(PIXEL_MAP_SEEKER);
+      document.getElementById("preview-natural-builder").innerHTML = buildSVGAsNumbers(PIXEL_MAP_BUILDER);
+      document.getElementById("preview-natural-leader").innerHTML = buildSVGAsNumbers(PIXEL_MAP_LEADER);
+      document.getElementById("preview-natural-sage").innerHTML = buildSVGAsNumbers(PIXEL_MAP_SAGE);
+    }
+
+    function syncColorToHex(inputId, hexId) {
+      const colorInput = document.getElementById(inputId);
+      const hexInput = document.getElementById(hexId);
+      hexInput.value = colorInput.value;
+      render();
+    }
+
+    function syncHexToColor(hexId, inputId) {
+      const hex = document.getElementById(hexId).value.trim();
+      const normalized = normalizeHex(hex);
+      if (normalized) {
+        document.getElementById(inputId).value = normalized;
+        document.getElementById(hexId).value = normalized;
+      }
+      render();
+    }
+
+    function createPresets(containerId, hexId, colorId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
+      PALETTE.forEach((color) => {
+        const btn = document.createElement("button");
+        btn.className = "preset-btn";
+        btn.style.background = color;
+        btn.title = color;
+        btn.onclick = () => {
+          document.getElementById(hexId).value = color;
+          document.getElementById(colorId).value = color;
+          render();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function copySVG() {
+      const colors = getColors();
+      const svg = buildSVG(colors, PIXEL_MAP_SEEKER);
+      navigator.clipboard.writeText(svg).then(() => {
+        const btn = document.querySelector('button[onclick="copySVG()"]');
+        const orig = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      });
+    }
+
+    function downloadPNG() {
+      const svgEl = document.querySelector("#preview svg");
+      if (!svgEl) return;
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const canvas = document.createElement("canvas");
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = "clawpunk.png";
+        a.click();
+      };
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    }
+
+    function randomize() {
+      const shuffled = [...PALETTE].sort(() => Math.random() - 0.5);
+      document.getElementById("bgHex").value = shuffled[0];
+      document.getElementById("bgColor").value = shuffled[0];
+      document.getElementById("bodyHex").value = shuffled[1];
+      document.getElementById("bodyColor").value = shuffled[1];
+      document.getElementById("eyeHex").value = shuffled[2];
+      document.getElementById("eyeColor").value = shuffled[2];
+      render();
+    }
+
+    // Init
+    createPresets("bgPresets", "bgHex", "bgColor");
+    createPresets("bodyPresets", "bodyHex", "bodyColor");
+    createPresets("eyePresets", "eyeHex", "eyeColor");
+
+    document.getElementById("bgColor").addEventListener("input", () => syncColorToHex("bgColor", "bgHex"));
+    document.getElementById("bodyColor").addEventListener("input", () => syncColorToHex("bodyColor", "bodyHex"));
+    document.getElementById("eyeColor").addEventListener("input", () => syncColorToHex("eyeColor", "eyeHex"));
+
+    document.getElementById("bgHex").addEventListener("input", () => syncHexToColor("bgHex", "bgColor"));
+    document.getElementById("bodyHex").addEventListener("input", () => syncHexToColor("bodyHex", "bodyColor"));
+    document.getElementById("eyeHex").addEventListener("input", () => syncHexToColor("eyeHex", "eyeColor"));
+
+    document.getElementById("bgHex").addEventListener("blur", () => syncHexToColor("bgHex", "bgColor"));
+    document.getElementById("bodyHex").addEventListener("blur", () => syncHexToColor("bodyHex", "bodyColor"));
+    document.getElementById("eyeHex").addEventListener("blur", () => syncHexToColor("eyeHex", "eyeColor"));
+
+    render();
+  </script>
+</body>
+</html>

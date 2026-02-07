@@ -25,8 +25,8 @@ const server = createServer((req, res) => {
       JSON.stringify({
         contractAddress:
           process.env.CLAWPUNKS_CONTRACT ||
-          "0xd99adfa07f97c444dcdddaa70b3c58a9d33124ee",
-        rpcUrl: process.env.ETHEREUM_RPC_URL || "https://eth.llamarpc.com",
+          "0x47354b283bC2310402974e570703104cE19D4596",
+        rpcUrl: process.env.ETHEREUM_RPC_URL || process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
       })
     );
     return;

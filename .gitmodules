@@ -1,3 +1,6 @@
 [submodule "contracts/lib/creator-token-standards"]
 	path = contracts/lib/creator-token-standards
 	url = https://github.com/limitbreakinc/creator-token-standards
+[submodule "contracts/lib/openzeppelin-contracts-v4"]
+	path = contracts/lib/openzeppelin-contracts-v4
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
